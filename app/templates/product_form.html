@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if product %}Edit{% else %}Add{% endif %} Product - Snaxa Vending
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center my-4">
+    <h1 class="h3">{% if product %}Edit{% else %}Add{% endif %} Product</h1>
+    <div>
+        {% if product %}
+        <a href="{{ url_for('main.products') }}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left"></i> Back to Products
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Product Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="brand" class="form-label">{{ form.brand.label }}</label>
+                        {{ form.brand(class="form-control", placeholder="e.g., Monster, Red Bull") }}
+                        {% if form.brand.errors %}
+                        <div class="text-danger">
+                            {% for error in form.brand.errors %}
+                            <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name(class="form-control", placeholder="e.g., Energy Drink, Potato Chips") }}
+                        {% if form.name.errors %}
+                        <div class="text-danger">
+                            {% for error in form.name.errors %}
+                            <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">{{ form.category.label }}</label>
+                        {{ form.category(class="form-select") }}
+                        {% if form.category.errors %}
+                        <div class="text-danger">
+                            {% for error in form.category.errors %}
+                            <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    {% if product %}
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Product Variants</h5>
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addVariantModal">
+                    <i class="bi bi-plus"></i> Add Variant
+                </button>
+            </div>
+            <div class="card-body">
+                {% if product.variants %}
+                <div class="table-responsive">
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Size (oz)</th>
+                                <th>Count</th>
+                                <th>Flavor</th>
+                                <th>Threshold</th>
+                                <th>Target</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for variant in product.variants %}
+                            <tr>
+                                <td>{{ variant.unit_size_oz }}</td>
+                                <td>{{ variant.units_per_pack }}-pack</td>
+                                <td>{{ variant.flavor or "—" }}</td>
+                                <td>${{ "%.2f"|format(variant.threshold_price_per_unit) }}</td>
+                                <td>${{ "%.2f"|format(variant.target_price_per_unit) }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="#" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{{ url_for('main.scrape_product', variant_id=variant.id) }}" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p>No variants added yet. Add a variant to start tracking prices.</p>
+                    <button type="button" class="btn btn-success mt-2" data-bs-toggle="modal" data-bs-target="#addVariantModal">
+                        <i class="bi bi-plus"></i> Add First Variant
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if product %}
+<!-- Add Variant Modal -->
+<div class="modal fade" id="addVariantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Product Variant</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('main.add_variant', product_id=product.id) }}">
+                    {{ variant_form.csrf_token }}
+                    <div class="mb-3">
+                        <label for="flavor" class="form-label">{{ variant_form.flavor.label }}</label>
+                        {{ variant_form.flavor(class="form-control", placeholder="e.g., Original, Cherry, etc. (optional)") }}
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="unit_size_oz" class="form-label">{{ variant_form.unit_size_oz.label }}</label>
+                            {{ variant_form.unit_size_oz(class="form-control", placeholder="e.g., 16") }}
+                            {% if variant_form.unit_size_oz.errors %}
+                            <div class="text-danger">
+                                {% for error in variant_form.unit_size_oz.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <label for="units_per_pack" class="form-label">{{ variant_form.units_per_pack.label }}</label>
+                            {{ variant_form.units_per_pack(class="form-control", placeholder="e.g., 12") }}
+                            {% if variant_form.units_per_pack.errors %}
+                            <div class="text-danger">
+                                {% for error in variant_form.units_per_pack.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="upc" class="form-label">{{ variant_form.upc.label }}</label>
+                        {{ variant_form.upc(class="form-control", placeholder="UPC code (optional)") }}
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="threshold_price_per_unit" class="form-label">{{ variant_form.threshold_price_per_unit.label }}</label>
+                            {{ variant_form.threshold_price_per_unit(class="form-control", placeholder="e.g., 1.50") }}
+                            {% if variant_form.threshold_price_per_unit.errors %}
+                            <div class="text-danger">
+                                {% for error in variant_form.threshold_price_per_unit.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="text-muted">Alert trigger price</small>
+                        </div>
+                        <div class="col-6">
+                            <label for="target_price_per_unit" class="form-label">{{ variant_form.target_price_per_unit.label }}</label>
+                            {{ variant_form.target_price_per_unit(class="form-control", placeholder="e.g., 1.25") }}
+                            {% if variant_form.target_price_per_unit.errors %}
+                            <div class="text-danger">
+                                {% for error in variant_form.target_price_per_unit.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <small class="text-muted">Ideal price</small>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        {{ variant_form.submit(class="btn btn-success") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

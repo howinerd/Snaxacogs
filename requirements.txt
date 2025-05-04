@@ -1,0 +1,30 @@
+# Flask and extensions
+flask
+flask-sqlalchemy
+flask-migrate
+flask-wtf
+wtforms
+
+# Database
+psycopg2-binary
+sqlalchemy
+alembic
+
+# Background processing
+redis
+rq
+
+# External services
+openai
+requests
+beautifulsoup4
+scraperapi-sdk
+discord-webhook
+
+# Utilities
+python-dotenv
+fuzzywuzzy[speedup]
+pandas
+
+# Frontend
+flask-assets

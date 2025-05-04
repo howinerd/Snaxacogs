@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Snaxa Vending{% endblock %}
+
+{% block content %}
+<div class="row my-4">
+    <div class="col-12">
+        <h1 class="h3 mb-4">Dashboard</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Products</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ product_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-box-seam fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Active Deals</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ deals_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-tags fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Recent Scrapes</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ recent_scrapes_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-arrow-repeat fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Alerts Sent</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ alerts_count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-bell fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold">Best Deals</h6>
+                <a href="{{ url_for('main.deals') }}" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if best_deals %}
+                <div class="table-responsive">
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Variant</th>
+                                <th>Vendor</th>
+                                <th>Price Per Unit</th>
+                                <th>Threshold</th>
+                                <th>Savings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for deal in best_deals %}
+                            <tr>
+                                <td>{{ deal.variant.product.brand }} {{ deal.variant.product.name }}</td>
+                                <td>{{ deal.variant.unit_size_oz }}oz {{ deal.variant.units_per_pack }}-pack</td>
+                                <td>{{ deal.vendor_name }}</td>
+                                <td>${{ "%.2f"|format(deal.price_per_unit) }}</td>
+                                <td>${{ "%.2f"|format(deal.variant.threshold_price_per_unit) }}</td>
+                                <td><span class="deal-alert">${{ "%.2f"|format(deal.price_vs_threshold) }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p>No deals found yet. Add products and run scrapes to find deals.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold">Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_scrapes %}
+                <ul class="list-group list-group-flush bg-transparent">
+                    {% for job in recent_scrapes %}
+                    <li class="list-group-item bg-transparent">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ job.vendor_name }} Scrape</h6>
+                            <small>{{ job.created_at.strftime('%m/%d %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">
+                            {% if job.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif job.status == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                            <span class="badge bg-warning">{{ job.status }}</span>
+                            {% endif %}
+                            {{ job.product_variant.product.brand }} {{ job.product_variant.product.name }}
+                        </p>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <p>No recent activity. Start scraping to see activity here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

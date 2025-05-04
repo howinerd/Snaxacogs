@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}My Products - SnaxaVending{% endblock %}
+
+{% block content %}
+<div class="main-title">
+    <i class="fas fa-boxes"></i> Products
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#importCsvModal">
+            <i class="fas fa-file-import me-1"></i> Import CSV
+        </button>
+        <button class="btn btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#smartAddModal">
+            <i class="fas fa-magic me-1"></i> Smart Add
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <i class="fas fa-plus me-1"></i> Add Product
+        </button>
+    </div>
+    <button id="scrapeAllBtn" class="btn btn-warning">
+        <i class="fas fa-sync-alt me-1"></i> Scrape All
+    </button>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex">
+        <div class="input-group" style="width: 300px;">
+            <span class="input-group-text bg-dark border-secondary">
+                <i class="fas fa-search text-muted"></i>
+            </span>
+            <input type="text" id="searchProducts" class="form-control" placeholder="Search products...">
+        </div>
+    </div>
+    <div class="d-flex align-items-center">
+        <span class="me-2">Show</span>
+        <select class="form-select" id="entriesSelect" style="width: 80px;">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All</option>
+        </select>
+        <span class="ms-2">entries</span>
+    </div>
+</div>
+
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    {{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle me-2"></i>
+    <strong>Scraping completed:</strong> 0 products scraped successfully, 0 errors.
+    <span class="text-muted">(May 02, 2025 11:29 AM EST)</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+
+<div class="mb-3">
+    <i class="fas fa-info-circle text-muted me-1"></i>
+    <span class="text-muted"><strong>Green prices</strong> indicate products below threshold price (good deals).</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Name</th>
+                <th>Vendor</th>
+                <th>Total Package Price</th>
+                <th>Price Per Item</th>
+                <th>Threshold Price</th>
+                <th>Last Scraped</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td>
+                    {% if product.is_below_threshold %}
+                    <span class="status-badge badge-below">Below</span>
+                    {% else %}
+                    <span class="status-badge badge-active">Active</span>
+                    {% endif %}
+                </td>
+                <td>{{ product.name }}</td>
+                <td><span class="vendor-badge">{{ product.vendor }}</span></td>
+                <td>
+                    {% if product.is_below_threshold %}
+                    <span class="text-success">${{ product.package_price }}</span>
+                    {% else %}
+                    ${{ product.package_price }}
+                    {% endif %}
+                    <div class="text-muted small">(Total for {{ product.units_per_pack }} pack)</div>
+                </td>
+                <td>
+                    {% if product.is_below_threshold %}
+                    <span class="text-success">${{ product.price_per_item }}/item</span>
+                    {% else %}
+                    ${{ product.price_per_item }}/item
+                    {% endif %}
+                </td>
+                <td>${{ product.threshold_price }}</td>
+                <td>{{ product.last_scraped }}</td>
+                <td>
+                    <button class="action-btn action-edit" data-product-id="{{ product.id }}" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn" data-product-id="{{ product.id }}" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="action-btn" data-product-id="{{ product.id }}" title="View Details">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <button class="action-btn action-delete" data-product-id="{{ product.id }}" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addProductModalLabel">Add New Product</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addProductForm" method="post" action="{{ url_for('main.add_product') }}">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">Product Name</label>
+                        <input type="text" class="form-control" id="productName" name="name" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="productVendor" class="form-label">Vendor</label>
+                            <select class="form-select" id="productVendor" name="vendor" required>
+                                <option value="Walmart">Walmart</option>
+                                <option value="eBay">eBay</option>
+                                <option value="Amazon">Amazon</option>
+                                <option value="Sam's Club">Sam's Club</option>
+                                <option value="Costco">Costco</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="productCategory" class="form-label">Category</label>
+                            <select class="form-select" id="productCategory" name="category">
+                                <option value="Snacks">Snacks</option>
+                                <option value="Beverages">Beverages</option>
+                                <option value="Candy">Candy</option>
+                                <option value="Chips">Chips</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label for="productUnitsPerPack" class="form-label">Units Per Pack</label>
+                            <input type="number" class="form-control" id="productUnitsPerPack" name="units_per_pack" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="productUnitSize" class="form-label">Unit Size (oz)</label>
+                            <input type="number" step="0.01" class="form-control" id="productUnitSize" name="unit_size_oz">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="productThresholdPrice" class="form-label">Threshold Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" class="form-control" id="productThresholdPrice" name="threshold_price" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label for="productUrl" class="form-label">Product URL</label>
+                        <input type="url" class="form-control" id="productUrl" name="product_url">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="addProductForm" class="btn btn-primary">Add Product</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div class="modal fade" id="importCsvModal" tabindex="-1" aria-labelledby="importCsvModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importCsvModalLabel">Import Products from CSV</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="importCsvForm" method="post" action="{{ url_for('main.import_csv') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="csvFile" class="form-label">Choose CSV File</label>
+                        <input type="file" class="form-control" id="csvFile" name="csv_file" accept=".csv" required>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-text text-muted">
+                            CSV should have columns: name, vendor, units_per_pack, unit_size_oz, threshold_price, product_url
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="importCsvForm" class="btn btn-primary">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Smart Add Modal -->
+<div class="modal fade" id="smartAddModal" tabindex="-1" aria-labelledby="smartAddModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header">
+                <h5 class="modal-title" id="smartAddModalLabel">Smart Add Product</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="smartAddForm" method="post" action="{{ url_for('main.smart_add') }}">
+                    <div class="mb-3">
+                        <label for="smartAddUrl" class="form-label">Product URL</label>
+                        <input type="url" class="form-control" id="smartAddUrl" name="product_url" required>
+                        <div class="form-text text-muted">
+                            Paste a product URL from a supported vendor, and we'll extract the details automatically.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="thresholdPrice" class="form-label">Threshold Price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" class="form-control" id="thresholdPrice" name="threshold_price" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="smartAddForm" class="btn btn-primary">Extract & Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('searchProducts').addEventListener('keyup', function () {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const name = row.children[1].textContent.toLowerCase();
+                const vendor = row.children[2].textContent.toLowerCase();
+                row.style.display = name.includes(searchTerm) || vendor.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        document.getElementById('entriesSelect').addEventListener('change', function () {
+            const val = this.value;
+            const rows = document.querySelectorAll('tbody tr');
+            if (val === 'all') {
+                rows.forEach(row => row.style.display = '');
+            } else {
+                const limit = parseInt(val);
+                rows.forEach((row, idx) => row.style.display = idx < limit ? '' : 'none');
+            }
+        });
+    });
+</script>
+{% endblock %}
